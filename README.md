@@ -6,7 +6,7 @@ The scripts here will deploy a sample Fabric Network on the IBM Container Servic
 ## Run your own network:
 
 #### Prequisites
- - Have a Kubernetes cluster up and running on the IBM Container Service in US South (Currently the only one the supports all the features necessary.)
+ - Have a one node Kubernetes cluster up and running on the IBM Container Service in US South (Currently the only one the supports all the features necessary.)
  - `kubectl` is configured to talk to your cluster. You can do this by using the Bluemix CLI and running `bx cs cluster-info <cluster-name>`. Export the config file that is the output of that command for kubectl to be configured to talk to your cluster.
  - Have `Go 1.9.3` installed. The proxy currently does not support version of Go higher than `1.9.3`
 
