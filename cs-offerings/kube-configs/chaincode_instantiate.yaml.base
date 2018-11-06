@@ -12,9 +12,9 @@ spec:
 
   containers:
   - name: chaincodeinstantiate
-    image: swayr/peer
+    image: hyperledger/fabric-peer
     imagePullPolicy: Always
-    command: ["sh", "-c", "peer chaincode instantiate -o $ORDERER_URL -C ${CHANNEL_NAME} -n ${CHAINCODE_NAME} -v ${CHAINCODE_VERSION} -c '{\"Args\":[\"init\",\"a\",\"100\",\"b\",\"200\"]}' --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA"]
+    command: ["sh", "-c", "peer chaincode instantiate -o $ORDERER_URL -C ${CHANNEL_NAME} -n ${CHAINCODE_NAME} -v ${CHAINCODE_VERSION} -c '{\"Args\":[]}' --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA"]
     env:
     - name: CHANNEL_NAME
       value: %CHANNEL_NAME%
@@ -33,9 +33,9 @@ spec:
     - name: GODEBUG
       value: "netdns=go"
     - name: ORDERER_URL
-      value: orderer:31010
+      value: blockchain-orderer:31010
     - name: CORE_CHAINCODE_BUILDER
-      value: swayr/fabric-ccenv
+      value: hyperledger/fabric-ccenv
     - name: CORE_PEER_TLS_ENABLED
       value: "true"
     - name: CORE_PEER_TLS_CERT_FILE

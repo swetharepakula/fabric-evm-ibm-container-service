@@ -12,7 +12,7 @@ spec:
 
   containers:
   - name: wipeshared
-    image: swayr/fabric-tools
+    image: hyperledger/fabric-tools
     imagePullPolicy: Always
     command: ["sh", "-c", "rm -rf /shared/*"]
     volumeMounts:

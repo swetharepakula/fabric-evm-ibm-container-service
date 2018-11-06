@@ -11,7 +11,7 @@ spec:
       claimName: shared-pvc
   containers:
   - name: createchanneltx
-    image: swayr/fabric-tools
+    image: hyperledger/fabric-tools
     imagePullPolicy: Always
     command: ["sh", "-c", "cd /shared && pwd && ls && configtxgen -profile TwoOrgsChannel -outputCreateChannelTx ${CHANNEL_NAME}.tx -channelID ${CHANNEL_NAME} && touch /shared/status_channeltx_complete "]
     env:
@@ -26,14 +26,14 @@ spec:
       name: shared
 
   - name: createchannel
-    image: swayr/fabric-tools
+    image: hyperledger/fabric-tools
     imagePullPolicy: Always
     command: ["sh", "-c", "while [ ! -f /shared/status_channeltx_complete ]; do echo Waiting for channeltx; sleep 2; done; peer channel create -o ${ORDERER_URL} --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -c ${CHANNEL_NAME} -f /shared/${CHANNEL_NAME}.tx && rm /shared/status_channeltx_complete && touch /shared/status_channelcreate_complete && cp ${CHANNEL_NAME}.block /shared/. "]
     env:
     - name: CHANNEL_NAME
       value: %CHANNEL_NAME%
     - name: ORDERER_URL
-      value: orderer:31010
+      value: blockchain-orderer:31010
     - name: CORE_PEER_ADDRESSAUTODETECT
       value: "false"
     - name: CORE_PEER_NETWORKID

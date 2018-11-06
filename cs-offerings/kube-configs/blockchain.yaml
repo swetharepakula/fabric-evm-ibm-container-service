@@ -14,16 +14,16 @@ spec:
       path: /var/run/docker.sock
   containers:
   - name: cryptogen
-    image: swayr/fabric-tools
+    image: hyperledger/fabric-tools
     imagePullPolicy: Always
-    command: ["sh", "-c", "cryptogen generate --config /etc/hyperledger/fabric/crypto-config.yaml && cp -r crypto-config /shared/ && for file in $(find /shared/ -iname *_sk); do dir=$(dirname $file); mv ${dir}/*_sk ${dir}/key.pem; done && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_cryptogen_complete "]
+    command: ["sh", "-c", "git clone https://github.com/swetharepakula/fabric-sampleconfig && cp -r fabric-sampleconfig/* /shared && cryptogen generate --config /shared/crypto-config.yaml && cp -r crypto-config /shared/ && for file in $(find /shared/ -iname *_sk); do dir=$(dirname $file); mv ${dir}/*_sk ${dir}/key.pem; done && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_cryptogen_complete "]
     volumeMounts:
     - mountPath: /shared
       name: shared
   - name: configtxgen
-    image: swayr/fabric-tools
+    image: hyperledger/fabric-tools
     imagePullPolicy: Always
-    command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/status_cryptogen_complete ]; do echo Waiting for cryptogen; sleep 1; done; cp /etc/hyperledger/fabric/configtx.yaml /shared/configtx.yaml; cd /shared/; configtxgen -profile TwoOrgsOrdererGenesis -outputBlock orderer.block && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_configtxgen_complete && rm /shared/status_cryptogen_complete"]
+    command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/status_cryptogen_complete ]; do echo Waiting for cryptogen; sleep 1; done; cd /shared/; configtxgen -profile TwoOrgsOrdererGenesis -outputBlock orderer.block && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_configtxgen_complete && rm /shared/status_cryptogen_complete"]
     env:
      - name: PEERHOST1
        value: blockchain-org1peer0
@@ -34,14 +34,14 @@ spec:
      - name: PEERPORT2
        value: "30210"
      - name: ORDERER_URL
-       value: orderer:31010
+       value: blockchain-orderer:31010
      - name: FABRIC_CFG_PATH
        value: /shared
     volumeMounts:
     - mountPath: /shared
       name: shared
   - name: bootstrap
-    image: swayr/fabric-tools
+    image: hyperledger/fabric-tools
     imagePullPolicy: Always
     command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/status_configtxgen_complete ]; do echo Waiting for configtxgen; sleep 1; done && touch /shared/bootstrapped && rm /shared/status_configtxgen_complete && echo 'Done with bootstrapping'" ]
     volumeMounts:
@@ -51,13 +51,13 @@ spec:
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: orderer
+  name: blockchain-orderer
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        name: orderer
+        name: blockchain-orderer
     spec:
       volumes:
       - name: shared
@@ -66,10 +66,10 @@ spec:
 
       containers:
       - name: pulse
-        image: swayr/fabric-tools
+        image: hyperledger/fabric-tools
         command: ["sh", "-c", "sleep 1 && UUID=$(cat /proc/sys/kernel/random/uuid) && while [ true ]; do curl https://ics-endpoint.mybluemix.net/pulse/beat/$UUID; sleep 10; done"]
-      - name: orderer
-        image: swayr/orderer
+      - name: blockchain-orderer
+        image: hyperledger/fabric-orderer
         command: ["sh", "-c", "sleep 5 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; orderer"]
         env:
         - name: ORDERER_CFG_PATH
@@ -81,7 +81,7 @@ spec:
         - name: ORDERER_GENERAL_LOGLEVEL
           value: debug
         - name: ORDERER_GENERAL_LOCALMSPDIR
-          value: /shared/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp
+          value: /shared/crypto-config/ordererOrganizations/example.com/orderers/blockchain-orderer.example.com/msp
         - name: ORDERER_GENERAL_LOCALMSPID
           value: OrdererMSP
         - name: ORDERER_GENERAL_GENESISMETHOD
@@ -93,11 +93,11 @@ spec:
         - name: ORDERER_GENERAL_TLS_ENABLED
           value: "true"
         - name: ORDERER_GENERAL_TLS_PRIVATEKEY
-          value: /shared/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.key
+          value: /shared/crypto-config/ordererOrganizations/example.com/orderers/blockchain-orderer.example.com/tls/server.key
         - name: ORDERER_GENERAL_TLS_CERTIFICATE
-          value: /shared/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+          value: /shared/crypto-config/ordererOrganizations/example.com/orderers/blockchain-orderer.example.com/tls/server.crt
         - name: ORDERER_GENERAL_TLS_ROOTCAS
-          value: "[/shared/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt]"
+          value: "[/shared/crypto-config/ordererOrganizations/example.com/orderers/blockchain-orderer.example.com/tls/ca.crt]"
         - name: GODEBUG
           value: "netdns=go"
         volumeMounts:
@@ -126,7 +126,7 @@ spec:
 
       containers:
       - name: org1peer0
-        image: swayr/peer 
+        image: hyperledger/fabric-peer
         command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; peer node start"]
         env:
         - name: CORE_PEER_ADDRESSAUTODETECT
@@ -170,13 +170,13 @@ spec:
         - name: FABRIC_CFG_PATH
           value: /etc/hyperledger/fabric/
         - name: ORDERER_URL
-          value: orderer:31010
+          value: blockchain-orderer:31010
         - name: GODEBUG
           value: "netdns=go"
         - name: CORE_VM_DOCKER_ATTACHSTDOUT
           value: "true"
         - name: CORE_CHAINCODE_BUILDER
-          value: swayr/fabric-ccenv
+          value: hyperledger/fabric-ccenv
         - name: CORE_PEER_TLS_ENABLED
           value: "true"
         - name: CORE_PEER_TLS_CERT_FILE
@@ -212,7 +212,7 @@ spec:
 
       containers:
       - name: org2peer0
-        image: swayr/peer
+        image: hyperledger/fabric-peer
         command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done;  peer node start"]
         env:
         - name: CORE_PEER_ADDRESSAUTODETECT
@@ -256,13 +256,13 @@ spec:
         - name: FABRIC_CFG_PATH
           value: /etc/hyperledger/fabric/
         - name: ORDERER_URL
-          value: orderer:31010
+          value: blockchain-orderer:31010
         - name: GODEBUG
           value: "netdns=go"
         - name: CORE_VM_DOCKER_ATTACHSTDOUT
           value: "true"
         - name: CORE_CHAINCODE_BUILDER
-          value: swayr/fabric-ccenv
+          value: hyperledger/fabric-ccenv
         - name: CORE_PEER_TLS_ENABLED
           value: "true"
         - name: CORE_PEER_TLS_CERT_FILE

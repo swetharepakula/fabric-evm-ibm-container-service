@@ -16,13 +16,13 @@ if [ -z ${PEER_MSPID} ]; then
 fi
 PEER_MSPID=${PEER_MSPID:-Org1MSP}
 
-# Default to "channel1" if not defined
+# Default to "mychannel" if not defined
 if [ -z "${CHANNEL_NAME}" ]; then
-	echo "CHANNEL_NAME not defined. I will use \"channel1\"."
+	echo "CHANNEL_NAME not defined. I will use \"mychannel\"."
 	echo "I will wait 5 seconds before continuing."
 	sleep 5
 fi
-CHANNEL_NAME=${CHANNEL_NAME:-channel1}
+CHANNEL_NAME=${CHANNEL_NAME:-mychannel}
 
 echo "Deleting old channel pods if exists"
 echo "Running: ${KUBECONFIG_FOLDER}/../scripts/delete/delete_channel-pods.sh"
@@ -35,15 +35,15 @@ echo "Creating createchannel pod"
 echo "Running: kubectl create -f ${KUBECONFIG_FOLDER}/create_channel.yaml"
 kubectl create -f ${KUBECONFIG_FOLDER}/create_channel.yaml
 
-while [ "$(kubectl get pod -a createchannel | grep createchannel | awk '{print $3}')" != "Completed" ]; do
+while [ "$(kubectl get pod createchannel | grep createchannel | awk '{print $3}')" != "Completed" ]; do
     echo "Waiting for createchannel container to be Completed"
     sleep 1;
 done
 
-if [ "$(kubectl get pod -a createchannel | grep createchannel | awk '{print $3}')" == "Completed" ]; then
+if [ "$(kubectl get pod createchannel | grep createchannel | awk '{print $3}')" == "Completed" ]; then
 	echo "Create Channel Completed Successfully"
 fi
 
-if [ "$(kubectl get pod -a createchannel | grep createchannel | awk '{print $3}')" != "Completed" ]; then
+if [ "$(kubectl get pod createchannel | grep createchannel | awk '{print $3}')" != "Completed" ]; then
 	echo "Create Channel Failed"
 fi
