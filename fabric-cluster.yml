@@ -8,23 +8,7 @@
 # blockchain network that are necessary for the applications to interact with it. These are all
 # knowledge that must be acquired from out-of-band sources. This file provides such a source.
 #
-name: "hlfv1"
 
-#
-# Any properties with an "x-" prefix will be treated as application-specific, exactly like how naming
-# in HTTP headers or swagger properties work. The SDK will simply ignore these fields and leave
-# them for the applications to process. This is a mechanism for different components of an application
-# to exchange information that are not part of the standard schema described below. In particular,
-# the "x-type" property with the "hlfv1" value example below is used by Hyperledger Composer to
-# determine the type of Fabric networks (v0.6 vs. v1.0) it needs to work with.
-#
-x-type: "hlfv1"
-x-loggingLevel: info
-
-#
-# Describe what the target network is/does.
-#
-description: "Sample Fabric Network"
 
 #
 # Schema version of the content. Used by the SDK to apply the corresponding parsing rules.
@@ -38,46 +22,27 @@ client:
 
   # Which organization does this application instance belong to? The value must be the name of an org
   # defined under "organizations"
-  organization: Org1
+  organization: org1
 
   logging:
     level: info
 
-# Global configuration for peer, event service and orderer timeouts
-  peer:
-    timeout:
-      connection: 3s
-      queryResponse: 45s
-      executeTxResponse: 30s
-  eventService:
-    timeout:
-      connection: 3s
-      registrationResponse: 3s
-  orderer:
-    timeout:
-      connection: 3s
-      response: 5s
-
-
-  # Needed to load users crypto keys and certs.
+  # Root of the MSP directories with keys and certs.
   cryptoconfig:
     path: <path-to-crypto-config-folder>/crypto-config
 
   # Some SDKs support pluggable KV stores, the properties under "credentialStore"
   # are implementation specific
   credentialStore:
-    # [Optional]. Not used by Go SDK. Others SDKs may use it if using an alternative impl
-    # Could be used if SDK would require an object for properties like url, db name, etc.
-    path: "/tmp/hfc-kvs"
+  #   # [Optional]. Used by user store. Not needed if all credentials are embedded in configuration
+  #   # and enrollments are performed elswhere.
+    path: "/tmp/state-store"
 
     # [Optional]. Specific to the CryptoSuite implementation used by GO SDK. Software-based implementations
     # requiring a key store. PKCS#11 based implementations does not.
     cryptoStore:
       # Specific to the underlying KeyValueStore that backs the crypto key store.
       path: /tmp/msp
-
-    # [Optional]. Specific to Composer environment. Not used by SDK Go.
-    wallet: wallet-name
 
    # BCCSP config for the client. Used by GO SDK.
   BCCSP:
@@ -87,17 +52,11 @@ client:
       provider: "SW"
      hashAlgorithm: "SHA2"
      softVerify: true
-     ephemeral: false
      level: 256
 
   tlsCerts:
     # [Optional]. Use system certificate pool when connecting to peers, orderers (for negotiating TLS) Default: false
-    systemCertPool: false
-
-    # [Optional]. Client key and cert for TLS handshake with peers and orderers
-    # client:
-    #   keyfile: $GOPATH/src/github.com/hyperledger/fabric-sdk-go/test/fixtures/config/mutual_tls/client_sdk_go-key.pem
-    #   certfile: $GOPATH/src/github.com/hyperledger/fabric-sdk-go/test/fixtures/config/mutual_tls/client_sdk_go.pem
+    systemCertPool: true
 
 #
 # [Optional]. But most apps would have this section so that channel objects can be constructed
@@ -106,72 +65,57 @@ client:
 #
 channels:
   # name of the channel
-  channel1:
+  mychannel:
     # Required. list of orderers designated by the application to use for transactions on this
     # channel. This list can be a result of access control ("org1" can only access "ordererA"), or
     # operational decisions to share loads from applications among the orderers.  The values must
     # be "names" of orgs defined under "organizations/peers"
-    orderers:
-      - orderer.example.com
+    # deprecated: not recommended, to override any orderer configuration items, entity matchers should be used.
+#    orderers:
+#      - orderer.example.com
 
     # Required. list of peers from participating orgs
     peers:
       blockchain-org1peer0.org1.example.com:
-        # [Optional]. will this peer be sent transaction proposals for endorsement? The peer must
-        # have the chaincode installed. The app can also use this property to decide which peers
-        # to send the chaincode install request. Default: true
-        endorsingPeer: true
-
-        # [Optional]. will this peer be sent query proposals? The peer must have the chaincode
-        # installed. The app can also use this property to decide which peers to send the
-        # chaincode install request. Default: true
-        chaincodeQuery: true
-
-        # [Optional]. will this peer be sent query proposals that do not require chaincodes, like
-        # queryBlock(), queryTransaction(), etc. Default: true
-        ledgerQuery: true
-
-        # [Optional]. will this peer be the target of the SDK's listener registration? All peers can
-        # produce events but the app typically only needs to connect to one to listen to events.
-        # Default: true
-        eventSource: true
-
-    # [Optional]. what chaincodes are expected to exist on this channel? The application can use
-    # this information to validate that the target peers are in the expected state by comparing
-    # this list with the query results of getInstalledChaincodes() and getInstantiatedChaincodes()
-    chaincodes:
-      # the format follows the "canonical name" of chaincodes by fabric code
-      - example02:v1
-      # - marbles:1.0
-
-  # multi-org test channel
-  orgchannel:
-
-    orderers:
-      - orderer.example.com
-
-    peers:
-      blockchain-org1peer0.org1.example.com:
         endorsingPeer: true
         chaincodeQuery: true
         ledgerQuery: true
         eventSource: true
-
       blockchain-org2peer0.org2.example.com:
         endorsingPeer: true
         chaincodeQuery: true
         ledgerQuery: true
         eventSource: true
 
+    # [Optional]. The application can use these options to perform channel operations like retrieving channel
+    # config etc.
+    policies:
+      #[Optional] options for retrieving channel configuration blocks
+      queryChannelConfig:
+        #[Optional] min number of success responses (from targets/peers)
+        minResponses: 1
+        #[Optional] channel config will be retrieved for these number of random targets
+        maxTargets: 1
+        #[Optional] retry options for query config block
+        retryOpts:
+          #[Optional] number of retry attempts
+          attempts: 5
+          #[Optional] the back off interval for the first retry attempt
+          initialBackoff: 500ms
+          #[Optional] the maximum back off interval for any retry attempt
+          maxBackoff: 5s
+          #[Optional] he factor by which the initial back off period is exponentially incremented
+          backoffFactor: 2.0
+
 #
 # list of participating organizations in this network
 #
 organizations:
-  Org1:
+  org1:
     mspid: Org1MSP
 
-    # Needed to load users crypto keys and certs for this org (absolute path or relative to global crypto path, DEV mode)
-    cryptoPath:  peerOrganizations/org1.example.com/users/{userName}@org1.example.com/msp
+    # This org's MSP store (absolute path or relative to client.cryptoconfig)
+    cryptoPath:  peerOrganizations/org1.example.com/users/{username}@org1.example.com/msp
 
     peers:
       - blockchain-org1peer0.org1.example.com
@@ -182,44 +126,30 @@ organizations:
     # dynamic certificate management (enroll, revoke, re-enroll). The following section is only for
     # Fabric-CA servers.
     certificateAuthorities:
-      - ca.org1.example.com
-
-    # [Optional]. If the application is going to make requests that are reserved to organization
-    # administrators, including creating/updating channels, installing/instantiating chaincodes, it
-    # must have access to the admin identity represented by the private key and signing certificate.
-    # Both properties can be the PEM string or local path to the PEM file. Note that this is mainly for
-    # convenience in development mode, production systems should not expose sensitive information
-    # this way. The SDK should allow applications to set the org admin identity via APIs, and only use
-    # this route as an alternative when it exists.
-    # adminPrivateKey:
-    #   pem: "-----BEGIN PRIVATE KEY----- <etc>"
-    # signedCert:
-    #   path: "/tmp/somepath/signed-cert.pem"
 
   # the profile will contain public information about organizations other than the one it belongs to.
   # These are necessary information to make transaction lifecycles work, including MSP IDs and
   # peers with a public URL to send transaction proposals. The file will not contain private
   # information reserved for members of the organization, such as admin key and certificate,
   # fabric-ca registrar enroll ID and secret, etc.
-  Org2:
+  org2:
     mspid: Org2MSP
 
-    # Needed to load users crypto keys and certs for this org (absolute path or relative to global crypto path, DEV mode)
-    cryptoPath:  peerOrganizations/org2.example.com/users/{userName}@org2.example.com/msp
+    # This org's MSP store (absolute path or relative to client.cryptoconfig)
+    cryptoPath:  peerOrganizations/org2.example.com/users/{username}@org2.example.com/msp
 
     peers:
       - blockchain-org2peer0.org2.example.com
 
     certificateAuthorities:
-      - ca.org2.example.com
 
   # Orderer Org name
   ordererorg:
       # Membership Service Provider ID for this organization
-      mspID: "OrdererOrg"
+      mspID: OrdererMSP
 
       # Needed to load users crypto keys and certs for this org (absolute path or relative to global crypto path, DEV mode)
-      cryptoPath: ordererOrganizations/example.com/users/{userName}@example.com/msp
+      cryptoPath: ordererOrganizations/example.com/users/{username}@example.com/msp
 
 
 #
@@ -228,14 +158,22 @@ organizations:
 # SDK is implementation specific. Consult each SDK's documentation for its handling of orderers.
 #
 orderers:
-  orderer.example.com:
-    url: grpcs://<cluster-public-ip>:31010
+  blockhain-orderer.example.com:
+    url: blockchain-orderer.example.com:31010
 
     # these are standard properties defined by the gRPC library
     # they will be passed in as-is to gRPC client constructor
     grpcOptions:
-      ssl-target-name-override: orderer
-      grpc-max-send-message-length: 15
+      ssl-target-name-override: blockchain-orderer.example.com
+      # These parameters should be set in coordination with the keepalive policy on the server,
+      # as incompatible settings can result in closing of connection.
+      # When duration of the 'keep-alive-time' is set to 0 or less the keep alive client parameters are disabled
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      # allow-insecure will be taken into consideration if address has no protocol defined, if true then grpc or else grpcs
+      allow-insecure: false
 
     tlsCACerts:
       # Certificate location absolute path
@@ -248,23 +186,86 @@ orderers:
 peers:
   blockchain-org1peer0.org1.example.com:
     # this URL is used to send endorsement and query requests
-    url: grpcs://<cluster-public-ip>:30110
-
-    # this URL is used to connect the EventHub and registering event listeners
-    eventUrl: grpcs://<cluster-public-ip>:30111
+    url: blockchain-org1peer0.org1.example.com:30110
 
     grpcOptions:
-      ssl-target-name-override: blockchain-org1peer0
-      grpc.http2.keepalive_time: 15
+      ssl-target-name-override: blockchain-org1peer0.org1.example.com
+      # These parameters should be set in coordination with the keepalive policy on the server,
+      # as incompatible settings can result in closing of connection.
+      # When duration of the 'keep-alive-time' is set to 0 or less the keep alive client parameters are disabled
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      # allow-insecure will be taken into consideration if address has no protocol defined, if true then grpc or else grpcs
+      allow-insecure: false
 
     tlsCACerts:
       # Certificate location absolute path
       path: <path-to-crypto-config-folder>/crypto-config/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
 
   blockchain-org2peer0.org2.example.com:
-    url: grpcs://<cluster-public-ip>:30210
-    eventUrl: grpcs://<cluster-public-ip>:30211
+    url: blockchain-org2peer0.org2.example.com:30210
     grpcOptions:
-      ssl-target-name-override: blockchain-org2peer0
+      ssl-target-name-override: blockchain-org2peer0.org2.example.com
+      # These parameters should be set in coordination with the keepalive policy on the server,
+      # as incompatible settings can result in closing of connection.
+      # When duration of the 'keep-alive-time' is set to 0 or less the keep alive client parameters are disabled
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      # allow-insecure will be taken into consideration if address has no protocol defined, if true then grpc or else grpcs
+      allow-insecure: false
+
     tlsCACerts:
       path: <path-to-crypto-config-folder>/crypto-config/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
+
+entityMatchers:
+  peer:
+    - pattern: blockchain-org1peer0.org1.example.(\w+)
+      urlSubstitutionExp: <cluster-public-ip>:30110
+      sslTargetOverrideUrlSubstitutionExp: blockchain-org1peer0.org1.example.com
+      mappedHost: blockchain-org1peer0.org1.example.com
+
+    - pattern: blockchain-org2peer0.org2.example.(\w+)
+      urlSubstitutionExp: <cluster-public-ip>:30210
+      sslTargetOverrideUrlSubstitutionExp: blockchain-org2peer0.org2.example.com
+      mappedHost: blockchain-org2peer0.org2.example.com
+
+    - pattern: (\w+).org1.example.(\w+):(\d+)
+      urlSubstitutionExp: <cluster-public-ip>:$2
+      sslTargetOverrideUrlSubstitutionExp: $1.org1.example.com
+      mappedHost: $1.org1.example.com
+
+    - pattern: (\w+).org2.example.(\w+):(\d+)
+      urlSubstitutionExp: <cluster-public-ip>:$2
+      sslTargetOverrideUrlSubstitutionExp: $1.org2.example.com
+      mappedHost: $1.org2.example.com
+
+    - pattern: (\w+):30110
+      urlSubstitutionExp: <cluster-public-ip>:30110
+      sslTargetOverrideUrlSubstitutionExp: blockchain-org1peer0.org1.example.com
+      mappedHost: blockchain-org1peer0.org1.example.com
+
+    - pattern: (\w+):30211
+      urlSubstitutionExp: <cluster-public-ip>:30210
+      sslTargetOverrideUrlSubstitutionExp: blockchain-org2peer0.org2.example.com
+      mappedHost: blockchain-org2peer0.org2.example.com
+
+  orderer:
+
+    - pattern: (\w+).example.(\w+)
+      urlSubstitutionExp: <cluster-public-ip>:31010
+      sslTargetOverrideUrlSubstitutionExp: blockchain-orderer.example.com
+      mappedHost: blockchain-orderer.example.com
+
+    - pattern: (\w+).example.(\w+):(\d+)
+      urlSubstitutionExp: <cluster-public-ip>:31010
+      sslTargetOverrideUrlSubstitutionExp: blockchain-orderer.example.com
+      mappedHost: blockhain-orderer.example.com
+
+    - pattern: blockchain-orderer:31010
+      urlSubstitutionExp: <cluster-public-ip>:31010
+      sslTargetOverrideUrlSubstitutionExp: blockchain-orderer.example.com
+      mappedHost: blockhain-orderer.example.com

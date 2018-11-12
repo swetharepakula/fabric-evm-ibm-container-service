@@ -1,19 +1,18 @@
 # Run a simple Fabric Network on the IBM Container Service
 
-The scripts here will deploy a sample Fabric Network on the IBM Container Service. The are using the docker images `swayr/peer` which have the EVM system chaincode installed as a plugin. The docker images were made against
-`github.com/swetharepakula/fabric/tree/FAB-6590-poc` commit sha: `5829f823a0c1a150933c5005c43d1eed7480fb5c` and with the sample config that is in this repo. For more details about the plugin please go to https://github.com/hyperledger/fabric-chaincode-evm. The instructions below will also cover creating a Go SDK configuration file that can be used with a proxy to use the web3 library to deploy Solidity Smart contracts to Fabric.
+The scripts here will deploy a sample Fabric Network on the IBM Container Service. The are using the docker images `hyperledger/fabric-peer`, `hyperledger/fabric-orderer`, `hyperledger/fabric-ccenv` and `hyperledger/fabric-tools`. The config used to configure the network can be found [here](https://github.com/swetharepakula/fabric-sampleconfig). The scripts install the EVM chaincode that can be found [here](https://github.com/hyperledger/fabric-chaincode-evm). The instructions below will also cover creating a Go SDK configuration file that can be used with Fab3 enabling the use of the web3 library to deploy Solidity Smart contracts to Fabric.
 
 ## Run your own network:
 
 #### Prequisites
- - Have a one node Kubernetes cluster up and running on the IBM Container Service in US South (Currently the only one the supports all the features necessary.)
+ - Have a one node Kubernetes cluster up and running on the IBM Container Service
  - `kubectl` is configured to talk to your cluster. You can do this by using the Bluemix CLI and running `bx cs cluster-info <cluster-name>`. Export the config file that is the output of that command for kubectl to be configured to talk to your cluster.
- - Have `Go 1.9.3` installed. The proxy currently does not support version of Go higher than `1.9.3`
+ - Have at least `Go 1.10.x` installed.
 
 #### Directions
 
 ##### Set up the Cluster
-1. Make sure you have all the prerequisites. The scripts will deploy a 2 Peers (1 for each Org) and 1 orderer. The scripts will also setup a channel with the id `channel1`, create credentials needed to talk to the network, and finally installs & instantiates a sample chaincode. Run the following from the root of this repo:
+1. Make sure you have all the prerequisites. The scripts will deploy a 2 Peers (1 for each Org) and 1 orderer. The scripts will also setup a channel with the id `mychannel`, create credentials needed to talk to the network, and finally installs & instantiates the EVM CC. Run the following from the root of this repo:
 ```
   $ cd cs-offerings/scripts
   $ ./create_all
@@ -24,7 +23,7 @@ The scripts here will deploy a sample Fabric Network on the IBM Container Servic
   NAME                                    READY     STATUS    RESTARTS   AGE
   blockchain-org1peer0-<uuid>   1/1       Running   0          20d
   blockchain-org2peer0-<uuid>   1/1       Running   0          20d
-  orderer-<uuid>                2/2       Running   0          20d
+  blockchain-orderer-<uuid>     2/2       Running   0          20d
 
   $ kubectl cp <pod name>:/shared/crypto-config crypto-config
 ```
@@ -39,16 +38,20 @@ Any of the pods in the fabric deployed can be used to copy the certs.
  kube-hou02-<uuid>                          <cluster-public-ip>   <cluster-private-ip>   free      normal   Ready    hou02   1.8.8_1507*
 ```
 With the `<cluster-public-ip>` grabbed from the Bluemix CLI, use that to replace all instances of `<cluster-public-ip>` found in `fabric-cluster.yml`
-1. Clone the repo https://github.com/swetharepakula/fabric-chaincode-evm
+1. Clone the repo https://github.com/hyperledger/fabric-chaincode-evm
 1. Go to the root of that repo and run the following to start the proxy locally at port 5000:
 ```
-ETHSERVER_CONFIG=<path-to-this-repo>/fabric-cluster.yml go run main.go
+FABPROXY_CONFIG=<path-to-this-repo>/fabric-cluster.yml go run main.go
 ```
 To customize the proxy more you can use the follow environment variables:
 ```
 PORT              -- Proxy will run on the port specified on the environment variable. Default is 5000.
-ETHSERVER_USER    -- Proxy will use the user id specfied on the environment variable. The user id corresponds to the name of the directories under the crypto-config/peerOrganizations/org1.example.com/users/Default is USER1.
-ETHSERVER_CHANNEL -- Proxy will use the channel specified on the environment variable. Default is channel1
+FABPROXY_ORG      -- Proxy will use the org specified. It will expect the user
+is of this org.
+FABPROXY_USER     -- Proxy will use the user id specfied on the environment variable. The user id corresponds to the name of the directories under the crypto-config/peerOrganizations/org1.example.com/users/.
+FABPROXY_CHANNEL  -- Proxy will use the channel specified on the environment variable. For this deployment it should be mychannel.
+FABPROXY_CCID     -- The chaincode id of the EVM Chaincode that has been
+installed. For this deployment it should be evmcc.
 ```
 
 ###### Deleting the Cluster
