@@ -58,3 +58,115 @@ spec:
     targetPort: 30211
     port: 30211
     name: events
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blockchain-org3peer0
+  labels:
+    run: blockchain-org3peer0
+spec:
+  type: NodePort
+  selector:
+    name: blockchain-org3peer0
+  ports:
+  - protocol: TCP
+    nodePort: 30310
+    targetPort: 30310
+    port: 30310
+    name: grpc
+  - protocol: TCP
+    nodePort: 30311
+    targetPort: 30311
+    port: 30311
+    name: events
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blockchain-org4peer0
+  labels:
+    run: blockchain-org4peer0
+spec:
+  type: NodePort
+  selector:
+    name: blockchain-org4peer0
+  ports:
+  - protocol: TCP
+    nodePort: 30410
+    targetPort: 30410
+    port: 30410
+    name: grpc
+  - protocol: TCP
+    nodePort: 30411
+    targetPort: 30411
+    port: 30411
+    name: events
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blockchain-org1ca
+  labels:
+    run: blockchain-org1ca
+spec:
+  type: NodePort
+  selector:
+    name: blockchain-org1ca
+  ports:
+  - protocol: TCP
+    nodePort: 32110
+    targetPort: 32110
+    port: 32110
+    name: grpc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blockchain-org2ca
+  labels:
+    run: blockchain-org2ca
+spec:
+  type: NodePort
+  selector:
+    name: blockchain-org2ca
+  ports:
+  - protocol: TCP
+    nodePort: 32210
+    targetPort: 32210
+    port: 32210
+    name: grpc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blockchain-org3ca
+  labels:
+    run: blockchain-org3ca
+spec:
+  type: NodePort
+  selector:
+    name: blockchain-org3ca
+  ports:
+  - protocol: TCP
+    nodePort: 32310
+    targetPort: 32310
+    port: 32310
+    name: grpc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blockchain-org4ca
+  labels:
+    run: blockchain-org4ca
+spec:
+  type: NodePort
+  selector:
+    name: blockchain-org4ca
+  ports:
+  - protocol: TCP
+    nodePort: 32410
+    targetPort: 32410
+    port: 32410
+    name: grpc
