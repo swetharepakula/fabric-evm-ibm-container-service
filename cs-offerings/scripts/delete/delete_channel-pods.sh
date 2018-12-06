@@ -12,10 +12,14 @@ fi
 PEER_ADDRESS="DoesntMatter"
 CHANNEL_NAME="DoesntMatter"
 PEER_MSPID="DoesntMatter"
+MSP_CONFIG_PATH="DoesntMatter"
+CORE_PEER_TLS_KEY_FILE="DoesntMatter"
+CORE_PEER_TLS_CERT_FILE="DoesntMatter"
+CORE_PEER_TLS_ROOTCERT_FILE="DoesntMatter"
 # Delete Create Channel Pod
 
 echo "Preparing yaml for createchannel pod for deletion"
-sed -e "s/%PEER_ADDRESS%/${PEER_ADDRESS}/g" -e "s/%CHANNEL_NAME%/${CHANNEL_NAME}/g" -e "s/%PEER_MSPID%/${PEER_MSPID}/g" ${KUBECONFIG_FOLDER}/create_channel.yaml.base > ${KUBECONFIG_FOLDER}/create_channel.yaml
+sed -e "s/%PEER_ADDRESS%/${PEER_ADDRESS}/g" -e "s/%CHANNEL_NAME%/${CHANNEL_NAME}/g" -e "s/%CHANNEL_PROFILE%/${CHANNEL_PROFILE}/g" -e "s/%PEER_MSPID%/${PEER_MSPID}/g" -e "s|%MSP_CONFIGPATH%|${MSP_CONFIGPATH}|g" -e "s|%CORE_PEER_TLS_KEY_FILE%|${CORE_PEER_TLS_KEY_FILE}|g" -e "s|%CORE_PEER_TLS_CERT_FILE%|${CORE_PEER_TLS_CERT_FILE}|g" -e "s|%CORE_PEER_TLS_ROOTCERT_FILE%|${CORE_PEER_TLS_ROOTCERT_FILE}|g" ${KUBECONFIG_FOLDER}/create_channel.yaml.base > ${KUBECONFIG_FOLDER}/create_channel.yaml
 
 echo "Deleting Existing Create Channel Pod"
 if [ "$(kubectl get pods | grep createchannel | wc -l | awk '{print $1}')" != "0" ]; then

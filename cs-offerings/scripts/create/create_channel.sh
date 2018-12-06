@@ -28,8 +28,7 @@ echo "Deleting old channel pods if exists"
 echo "Running: ${KUBECONFIG_FOLDER}/../scripts/delete/delete_channel-pods.sh"
 ${KUBECONFIG_FOLDER}/../scripts/delete/delete_channel-pods.sh
 
-echo "Preparing yaml file for create channel"
-sed -e "s/%CHANNEL_NAME%/${CHANNEL_NAME}/g" -e "s/%PEER_MSPID%/${PEER_MSPID}/g" ${KUBECONFIG_FOLDER}/create_channel.yaml.base > ${KUBECONFIG_FOLDER}/create_channel.yaml
+sed -e "s/%PEER_ADDRESS%/${PEER_ADDRESS}/g" -e "s/%CHANNEL_NAME%/${CHANNEL_NAME}/g" -e "s/%CHANNEL_PROFILE%/${CHANNEL_PROFILE}/g" -e "s/%PEER_MSPID%/${PEER_MSPID}/g" -e "s|%MSP_CONFIGPATH%|${MSP_CONFIGPATH}|g" -e "s|%CORE_PEER_TLS_KEY_FILE%|${CORE_PEER_TLS_KEY_FILE}|g" -e "s|%CORE_PEER_TLS_CERT_FILE%|${CORE_PEER_TLS_CERT_FILE}|g" -e "s|%CORE_PEER_TLS_ROOTCERT_FILE%|${CORE_PEER_TLS_ROOTCERT_FILE}|g" ${KUBECONFIG_FOLDER}/create_channel.yaml.base > ${KUBECONFIG_FOLDER}/create_channel.yaml
 
 echo "Creating createchannel pod"
 echo "Running: kubectl create -f ${KUBECONFIG_FOLDER}/create_channel.yaml"

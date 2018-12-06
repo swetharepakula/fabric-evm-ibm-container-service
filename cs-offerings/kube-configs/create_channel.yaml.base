@@ -13,10 +13,12 @@ spec:
   - name: createchanneltx
     image: hyperledger/fabric-tools
     imagePullPolicy: Always
-    command: ["sh", "-c", "cd /shared && pwd && ls && configtxgen -profile TwoOrgsChannel -outputCreateChannelTx ${CHANNEL_NAME}.tx -channelID ${CHANNEL_NAME} && touch /shared/status_channeltx_complete "]
+    command: ["sh", "-c", "cd /shared && pwd && ls && configtxgen -profile ${CHANNEL_PROFILE} -outputCreateChannelTx ${CHANNEL_NAME}.tx -channelID ${CHANNEL_NAME} && touch /shared/status_channeltx_${CHANNEL_NAME}_complete "]
     env:
     - name: CHANNEL_NAME
       value: %CHANNEL_NAME%
+    - name: CHANNEL_PROFILE
+      value: %CHANNEL_PROFILE%
     - name: FABRIC_CFG_PATH
       value: /shared
     - name: GODEBUG
@@ -28,26 +30,34 @@ spec:
   - name: createchannel
     image: hyperledger/fabric-tools
     imagePullPolicy: Always
-    command: ["sh", "-c", "while [ ! -f /shared/status_channeltx_complete ]; do echo Waiting for channeltx; sleep 2; done; peer channel create -o ${ORDERER_URL} --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -c ${CHANNEL_NAME} -f /shared/${CHANNEL_NAME}.tx && rm /shared/status_channeltx_complete && touch /shared/status_channelcreate_complete && cp ${CHANNEL_NAME}.block /shared/. "]
+    command: ["sh", "-c", "while [ ! -f /shared/status_channeltx_${CHANNEL_NAME}_complete ]; do echo Waiting for channeltx; sleep 2; done; peer channel create -o ${ORDERER_URL} --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -c ${CHANNEL_NAME} -f /shared/${CHANNEL_NAME}.tx && rm /shared/status_channeltx_${CHANNEL_NAME}_complete && touch /shared/status_channelcreate_${CHANNEL_NAME}_complete && cp ${CHANNEL_NAME}.block /shared/. "]
     env:
     - name: CHANNEL_NAME
       value: %CHANNEL_NAME%
     - name: ORDERER_URL
       value: blockchain-orderer:31010
+    - name: CORE_PEER_ADDRESS
+      value: %PEER_ADDRESS%
     - name: CORE_PEER_ADDRESSAUTODETECT
       value: "false"
     - name: CORE_PEER_NETWORKID
       value: nid1
     - name: CORE_PEER_LOCALMSPID
-      value: Org1MSP
+      value: %PEER_MSPID%
     - name: CORE_PEER_MSPCONFIGPATH
-      value: /shared/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+      value: %MSP_CONFIGPATH%
     - name: CORE_LOGGING_LEVEL
       value: debug
     - name: FABRIC_CFG_PATH
       value: /etc/hyperledger/fabric
     - name: CORE_PEER_TLS_ENABLED
       value: "true"
+    - name: CORE_PEER_TLS_CERT_FILE
+      value: %CORE_PEER_TLS_CERT_FILE%
+    - name: CORE_PEER_TLS_KEY_FILE
+      value: %CORE_PEER_TLS_KEY_FILE%
+    - name: CORE_PEER_TLS_ROOTCERT_FILE
+      value: %CORE_PEER_TLS_ROOTCERT_FILE%
     - name: ORDERER_CA
       value: /shared/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
     - name: GODEBUG

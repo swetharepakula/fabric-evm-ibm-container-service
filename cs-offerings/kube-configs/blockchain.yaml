@@ -16,14 +16,14 @@ spec:
   - name: cryptogen
     image: hyperledger/fabric-tools
     imagePullPolicy: Always
-    command: ["sh", "-c", "git clone https://github.com/swetharepakula/fabric-sampleconfig && cp -r fabric-sampleconfig/* /shared && cryptogen generate --config /shared/crypto-config.yaml && cp -r crypto-config /shared/ && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_cryptogen_complete "]
+    command: ["sh", "-c", "git clone https://github.com/swetharepakula/fabric-sampleconfig && cp -r fabric-sampleconfig/* /shared && cryptogen generate --config /shared/crypto-config.yaml && cp -r crypto-config /shared/ && for file in $(find /shared/ -iname *_sk); do dir=$(dirname $file); cp ${dir}/*_sk ${dir}/key.pem; done && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_cryptogen_complete "]
     volumeMounts:
     - mountPath: /shared
       name: shared
   - name: configtxgen
     image: hyperledger/fabric-tools
     imagePullPolicy: Always
-    command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/status_cryptogen_complete ]; do echo Waiting for cryptogen; sleep 1; done; cd /shared/; configtxgen -profile TwoOrgsOrdererGenesis -outputBlock orderer.block && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_configtxgen_complete && rm /shared/status_cryptogen_complete"]
+    command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/status_cryptogen_complete ]; do echo Waiting for cryptogen; sleep 1; done; cd /shared/; configtxgen -profile FourOrgsOrdererGenesis -outputBlock orderer.block && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_configtxgen_complete && rm /shared/status_cryptogen_complete"]
     env:
      - name: PEERHOST1
        value: blockchain-org1peer0
@@ -65,9 +65,6 @@ spec:
           claimName: shared-pvc
 
       containers:
-      - name: pulse
-        image: hyperledger/fabric-tools
-        command: ["sh", "-c", "sleep 1 && UUID=$(cat /proc/sys/kernel/random/uuid) && while [ true ]; do curl https://ics-endpoint.mybluemix.net/pulse/beat/$UUID; sleep 10; done"]
       - name: blockchain-orderer
         image: hyperledger/fabric-orderer
         command: ["sh", "-c", "sleep 5 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; orderer"]
@@ -276,3 +273,267 @@ spec:
           name: shared
         - mountPath: /host/var/run/docker.sock
           name: dockersocket
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blockchain-org3peer0
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: blockchain-org3peer0
+    spec:
+      volumes:
+      - name: shared
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      - name: dockersocket
+        hostPath:
+          path: /var/run/docker.sock
+
+      containers:
+      - name: org3peer0
+        image: hyperledger/fabric-peer
+        command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; peer node start"]
+        env:
+        - name: CORE_PEER_ADDRESSAUTODETECT
+          value: "true"
+        - name: CORE_PEER_NETWORKID
+          value: nid1
+        - name: CORE_PEER_ID
+          value: org3peer0
+        - name: CORE_PEER_ADDRESS
+          value: blockchain-org3peer0:30310
+        - name: CORE_PEER_LISTENADDRESS
+          value: 0.0.0.0:30310
+        - name: CORE_PEER_EVENTS_ADDRESS
+          value: 0.0.0.0:30311
+        - name: CORE_PEER_GOSSIP_BOOTSTRAP
+          value: blockchain-org3peer0:30310
+        - name: CORE_VM_ENDPOINT
+          value: unix:///host/var/run/docker.sock
+        - name: CORE_PEER_LOCALMSPID
+          value: Org3MSP
+        - name: CORE_PEER_MSPCONFIGPATH
+          value: /shared/crypto-config/peerOrganizations/org3.example.com/peers/blockchain-org3peer0.org3.example.com/msp/
+        - name: CORE_LOGGING_LEVEL
+          value: debug
+        - name: CORE_LOGGING_PEER
+          value: debug
+        - name: CORE_LOGGING_CAUTHDSL
+          value: debug
+        - name: CORE_LOGGING_GOSSIP
+          value: debug
+        - name: CORE_LOGGING_LEDGER
+          value: debug
+        - name: CORE_LOGGING_MSP
+          value: info
+        - name: CORE_LOGGING_POLICIES
+          value: debug
+        - name: CORE_LOGGING_GRPC
+          value: debug
+        - name: CORE_LEDGER_STATE_STATEDATABASE
+          value: goleveldb
+        - name: FABRIC_CFG_PATH
+          value: /etc/hyperledger/fabric/
+        - name: ORDERER_URL
+          value: blockchain-orderer:31010
+        - name: GODEBUG
+          value: "netdns=go"
+        - name: CORE_VM_DOCKER_ATTACHSTDOUT
+          value: "true"
+        - name: CORE_CHAINCODE_BUILDER
+          value: hyperledger/fabric-ccenv
+        - name: CORE_PEER_TLS_ENABLED
+          value: "true"
+        - name: CORE_PEER_TLS_CERT_FILE
+          value: /shared/crypto-config/peerOrganizations/org3.example.com/peers/blockchain-org3peer0.org3.example.com/tls/server.crt
+        - name: CORE_PEER_TLS_KEY_FILE
+          value: /shared/crypto-config/peerOrganizations/org3.example.com/peers/blockchain-org3peer0.org3.example.com/tls/server.key
+        - name: CORE_PEER_TLS_ROOTCERT_FILE
+          value: /shared/crypto-config/peerOrganizations/org3.example.com/peers/blockchain-org3peer0.org3.example.com/tls/ca.crt
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+        - mountPath: /host/var/run/docker.sock
+          name: dockersocket
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blockchain-org4peer0
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: blockchain-org4peer0
+    spec:
+      volumes:
+      - name: shared
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      - name: dockersocket
+        hostPath:
+          path: /var/run/docker.sock
+
+      containers:
+      - name: org4peer0
+        image: hyperledger/fabric-peer
+        command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done;  peer node start"]
+        env:
+        - name: CORE_PEER_ADDRESSAUTODETECT
+          value: "true"
+        - name: CORE_PEER_ID
+          value: org4peer0
+        - name: CORE_PEER_NETWORKID
+          value: nid1
+        - name: CORE_PEER_ADDRESS
+          value: blockchain-org4peer0:30410
+        - name: CORE_PEER_LISTENADDRESS
+          value: 0.0.0.0:30410
+        - name: CORE_PEER_EVENTS_ADDRESS
+          value: 0.0.0.0:30411
+        - name: CORE_PEER_GOSSIP_BOOTSTRAP
+          value: blockchain-org2peer0:30410
+        - name: CORE_VM_ENDPOINT
+          value: unix:///host/var/run/docker.sock
+        - name: CORE_PEER_LOCALMSPID
+          value: Org4MSP
+        - name: CORE_PEER_MSPCONFIGPATH
+          value: /shared/crypto-config/peerOrganizations/org4.example.com/peers/blockchain-org4peer0.org4.example.com/msp/
+        - name: CORE_LOGGING_LEVEL
+          value: debug
+        - name: CORE_LOGGING_PEER
+          value: debug
+        - name: CORE_LOGGING_CAUTHDSL
+          value: debug
+        - name: CORE_LOGGING_GOSSIP
+          value: debug
+        - name: CORE_LOGGING_LEDGER
+          value: debug
+        - name: CORE_LOGGING_MSP
+          value: debug
+        - name: CORE_LOGGING_POLICIES
+          value: debug
+        - name: CORE_LOGGING_GRPC
+          value: debug
+        - name: CORE_LEDGER_STATE_STATEDATABASE
+          value: goleveldb
+        - name: FABRIC_CFG_PATH
+          value: /etc/hyperledger/fabric/
+        - name: ORDERER_URL
+          value: blockchain-orderer:31010
+        - name: GODEBUG
+          value: "netdns=go"
+        - name: CORE_VM_DOCKER_ATTACHSTDOUT
+          value: "true"
+        - name: CORE_CHAINCODE_BUILDER
+          value: hyperledger/fabric-ccenv
+        - name: CORE_PEER_TLS_ENABLED
+          value: "true"
+        - name: CORE_PEER_TLS_CERT_FILE
+          value: /shared/crypto-config/peerOrganizations/org4.example.com/peers/blockchain-org4peer0.org4.example.com/tls/server.crt
+        - name: CORE_PEER_TLS_KEY_FILE
+          value: /shared/crypto-config/peerOrganizations/org4.example.com/peers/blockchain-org4peer0.org4.example.com/tls/server.key
+        - name: CORE_PEER_TLS_ROOTCERT_FILE
+          value: /shared/crypto-config/peerOrganizations/org4.example.com/peers/blockchain-org4peer0.org4.example.com/tls/ca.crt
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+        - mountPath: /host/var/run/docker.sock
+          name: dockersocket
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blockchain-org1ca
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: blockchain-org1ca
+    spec:
+      volumes:
+      - name: shared
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      containers:
+      - name: org1ca
+        image: hyperledger/fabric-ca
+        command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; fabric-ca-server start -b admin:adminpw --home /shared/cas/org1 -p 32110"]
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blockchain-org2ca
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: blockchain-org2ca
+    spec:
+      volumes:
+      - name: shared
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      containers:
+      - name: org2ca
+        image: hyperledger/fabric-ca
+        command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; fabric-ca-server start -b admin:adminpw --home /shared/cas/org2 -p 32210"]
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blockchain-org3ca
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: blockchain-org3ca
+    spec:
+      volumes:
+      - name: shared
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      containers:
+      - name: org1ca
+        image: hyperledger/fabric-ca
+        command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; fabric-ca-server start -b admin:adminpw --home /shared/cas/org3 -p 32310"]
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blockchain-org4ca
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: blockchain-org4ca
+    spec:
+      volumes:
+      - name: shared
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      containers:
+      - name: org1ca
+        image: hyperledger/fabric-ca
+        command: ["sh", "-c", "sleep 1 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; fabric-ca-server start -b admin:adminpw --home /shared/cas/org4 -p 32410"]
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
