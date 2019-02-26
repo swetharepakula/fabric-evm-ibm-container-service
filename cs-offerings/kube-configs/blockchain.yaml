@@ -16,7 +16,7 @@ spec:
   - name: cryptogen
     image: hyperledger/fabric-tools
     imagePullPolicy: Always
-    command: ["sh", "-c", "git clone https://github.com/swetharepakula/fabric-sampleconfig && cp -r fabric-sampleconfig/* /shared && cryptogen generate --config /shared/crypto-config.yaml && cp -r crypto-config /shared/ && for file in $(find /shared/ -iname *_sk); do dir=$(dirname $file); cp ${dir}/*_sk ${dir}/key.pem; done && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_cryptogen_complete "]
+    command: ["sh", "-c", "git clone -b fabric-ca https://github.com/swetharepakula/fabric-sampleconfig && cp -r fabric-sampleconfig/* /shared && cryptogen generate --config /shared/crypto-config.yaml && cp -r crypto-config /shared/ && for file in $(find /shared/ -iname *_sk); do dir=$(dirname $file); cp ${dir}/*_sk ${dir}/key.pem; done && find /shared -type d | xargs chmod a+rx && find /shared -type f | xargs chmod a+r && touch /shared/status_cryptogen_complete "]
     volumeMounts:
     - mountPath: /shared
       name: shared
