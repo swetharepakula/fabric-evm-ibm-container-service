@@ -1,4 +1,33 @@
 ---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: chaincode-containers
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: chaincode-containers
+    spec:
+      volumes:
+      - name: shared
+        persistentVolumeClaim:
+          claimName: shared-pvc
+      containers:
+      - name: chaincode-containers 
+        image: docker:stable-dind 
+        command: ["sh", "-c", "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:32222"]
+        env:
+        - name: DOCKER_HOST 
+          value: "tcp://0.0.0.0:32222"
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+        securityContext:
+          privileged: true
+
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -9,9 +38,6 @@ spec:
   - name: shared
     persistentVolumeClaim:
       claimName: shared-pvc
-  - name: dockersocket
-    hostPath:
-      path: /var/run/docker.sock
   containers:
   - name: cryptogen
     image: hyperledger/fabric-tools
@@ -65,9 +91,6 @@ spec:
           claimName: shared-pvc
 
       containers:
-      - name: pulse
-        image: hyperledger/fabric-tools
-        command: ["sh", "-c", "sleep 1 && UUID=$(cat /proc/sys/kernel/random/uuid) && while [ true ]; do curl https://ics-endpoint.mybluemix.net/pulse/beat/$UUID; sleep 10; done"]
       - name: blockchain-orderer
         image: hyperledger/fabric-orderer
         command: ["sh", "-c", "sleep 5 && while [ ! -f /shared/bootstrapped ]; do echo Waiting for bootstrap; sleep 1; done; orderer"]
@@ -120,10 +143,6 @@ spec:
       - name: shared
         persistentVolumeClaim:
           claimName: shared-pvc
-      - name: dockersocket
-        hostPath:
-          path: /var/run/docker.sock
-
       containers:
       - name: org1peer0
         image: hyperledger/fabric-peer
@@ -144,7 +163,13 @@ spec:
         - name: CORE_PEER_GOSSIP_BOOTSTRAP
           value: blockchain-org1peer0:30110
         - name: CORE_VM_ENDPOINT
-          value: unix:///host/var/run/docker.sock
+          value: docker-socket:32222
+        - name: CORE_CHAINCODE_EXECUTETIMEOUT
+          value: 1800s
+        - name: CORE_CHAINCODE_DEPLOYTIMEOUT
+          value: 1800s
+        - name: CORE_CHAINCODE_STARTUPTIMEOUT
+          value: 1800s
         - name: CORE_PEER_LOCALMSPID
           value: Org1MSP
         - name: CORE_PEER_MSPCONFIGPATH
@@ -188,8 +213,6 @@ spec:
         volumeMounts:
         - mountPath: /shared
           name: shared
-        - mountPath: /host/var/run/docker.sock
-          name: dockersocket
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -206,10 +229,6 @@ spec:
       - name: shared
         persistentVolumeClaim:
           claimName: shared-pvc
-      - name: dockersocket
-        hostPath:
-          path: /var/run/docker.sock
-
       containers:
       - name: org2peer0
         image: hyperledger/fabric-peer
@@ -230,7 +249,13 @@ spec:
         - name: CORE_PEER_GOSSIP_BOOTSTRAP
           value: blockchain-org2peer0:30210
         - name: CORE_VM_ENDPOINT
-          value: unix:///host/var/run/docker.sock
+          value: docker-socket:32222
+        - name: CORE_CHAINCODE_EXECUTETIMEOUT
+          value: 1800s
+        - name: CORE_CHAINCODE_DEPLOYTIMEOUT
+          value: 1800s
+        - name: CORE_CHAINCODE_STARTUPTIMEOUT
+          value: 1800s
         - name: CORE_PEER_LOCALMSPID
           value: Org2MSP
         - name: CORE_PEER_MSPCONFIGPATH
@@ -274,5 +299,3 @@ spec:
         volumeMounts:
         - mountPath: /shared
           name: shared
-        - mountPath: /host/var/run/docker.sock
-          name: dockersocket
