@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: updateanchor
+spec:
+  restartPolicy: "Never"
+  volumes:
+  - name: shared
+    persistentVolumeClaim:
+      claimName: shared-pvc
+  containers:
+  - name: updateanchortx
+    image: hyperledger/fabric-tools
+    imagePullPolicy: Always
+    # command: ["sh","-c","sleep 3600"]
+    command: ["sh", "-c", "cd /shared && pwd && configtxgen -profile ${CHANNEL_PROFILE} -outputAnchorPeersUpdate ${CHANNEL_NAME}${CORE_PEER_MSPID}anchors.tx -channelID ${CHANNEL_NAME} -asOrg ${CORE_PEER_MSPID} && touch /shared/status_anchortx_${CHANNEL_NAME}_${CORE_PEER_MSPID}_complete "]
+    env:
+    - name: CHANNEL_NAME
+      value: channelc
+    - name: CHANNEL_PROFILE
+      value: FourOrgsChannel
+    - name: CORE_PEER_MSPID
+      value: Org4MSP
+    - name: FABRIC_CFG_PATH
+      value: /shared
+    - name: GODEBUG
+      value: "netdns=go"
+    volumeMounts:
+    - mountPath: /shared
+      name: shared
+
+  - name: updateanchor
+    image: hyperledger/fabric-tools
+    imagePullPolicy: Always
+    command: ["sh", "-c", "while [ ! -f /shared/status_anchortx_${CHANNEL_NAME}_${CORE_PEER_LOCALMSPID}_complete ]; do echo Waiting for anchorupdatetx; sleep 2; done; peer channel update -o ${ORDERER_URL} --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -c ${CHANNEL_NAME} -f /shared/${CHANNEL_NAME}${CORE_PEER_LOCALMSPID}anchors.tx && rm /shared/status_anchortx_${CHANNEL_NAME}_${CORE_PEER_LOCALMSPID}_complete && touch /shared/status_anchorupdate_${CHANNEL_NAME}_${CORE_PEER_LOCALMSPID}_complete"]
+    env:
+    - name: CHANNEL_NAME
+      value: channelc
+    - name: ORDERER_URL
+      value: blockchain-orderer:31010
+    - name: CORE_PEER_ADDRESS
+      value: blockchain-org4peer0:30410
+    - name: CORE_PEER_ADDRESSAUTODETECT
+      value: "false"
+    - name: CORE_PEER_NETWORKID
+      value: nid1
+    - name: CORE_PEER_LOCALMSPID
+      value: Org4MSP
+    - name: CORE_PEER_MSPCONFIGPATH
+      value: /shared/crypto-config/peerOrganizations/org4.example.com/users/Admin@org4.example.com/msp
+    - name: CORE_LOGGING_LEVEL
+      value: debug
+    - name: FABRIC_CFG_PATH
+      value: /etc/hyperledger/fabric
+    - name: CORE_PEER_TLS_ENABLED
+      value: "true"
+    - name: CORE_PEER_TLS_CERT_FILE
+      value: /shared/crypto-config/peerOrganizations/org4.example.com/peers/blockchain-org4peer0.org4.example.com/tls/server.crt
+    - name: CORE_PEER_TLS_KEY_FILE
+      value: /shared/crypto-config/peerOrganizations/org4.example.com/peers/blockchain-org4peer0.org4.example.com/tls/server.key
+    - name: CORE_PEER_TLS_ROOTCERT_FILE
+      value: /shared/crypto-config/peerOrganizations/org4.example.com/peers/blockchain-org4peer0.org4.example.com/tls/ca.crt
+    - name: ORDERER_CA
+      value: /shared/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+    - name: GODEBUG
+      value: "netdns=go"
+    volumeMounts:
+    - mountPath: /shared
+      name: shared
