@@ -16,6 +16,10 @@ echo "=> DELETE_ALL: Deleting create and join channel pods"
 ./delete/delete_channel-pods.sh
 
 echo ""
+echo "=> DELETE_ALL: Deleting update channel anchor pods"
+./delete/delete_anchor-pods.sh
+
+echo ""
 echo "=> DELETE_ALL: Deleting install chaincode pod"
 ./delete/delete_chaincode-install.sh
 

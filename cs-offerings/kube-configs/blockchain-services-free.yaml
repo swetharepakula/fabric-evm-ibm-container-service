@@ -1,6 +1,23 @@
 apiVersion: v1
 kind: Service
 metadata:
+  name: docker-socket
+  labels:
+    run: chaincode-containers
+spec:
+  type: NodePort
+  selector:
+    name: chaincode-containers
+  ports:
+  - protocol: TCP
+    nodePort: 32222
+    targetPort: 32222
+    port: 32222
+    name: docker-host
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: blockchain-orderer
   labels:
     run: blockchain-orderer
